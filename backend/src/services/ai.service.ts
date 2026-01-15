@@ -26,7 +26,8 @@ export const parseRFPRequirements = async (userInput: string) => {
             response_format: { type: "json_object" }
         });
 
-        const content = response.choices[0].message.content;
+        const choice = response.choices[0];
+        const content = choice?.message?.content;
         if (!content) throw new Error("No content received from AI");
         return JSON.parse(content);
     } catch (error) {
@@ -59,7 +60,8 @@ export const parseVendorResponse = async (emailContent: string) => {
             response_format: { type: "json_object" }
         });
 
-        const content = response.choices[0].message.content;
+        const choice = response.choices[0];
+        const content = choice?.message?.content;
         if (!content) throw new Error("No content received from AI");
         return JSON.parse(content);
     } catch (error) {

@@ -51,6 +51,9 @@ export const getRFPs = async (req: Request, res: Response) => {
 export const getRFPById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        if (typeof id !== 'string') {
+            return res.status(400).json({ error: 'Invalid RFP ID' });
+        }
         const rfp = await prisma.rFP.findUnique({
             where: { id },
             include: {
