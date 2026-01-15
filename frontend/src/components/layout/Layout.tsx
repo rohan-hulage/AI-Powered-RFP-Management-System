@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle } from 'lucide-react';
 import clsx from 'clsx';
 
 const Navbar = () => {

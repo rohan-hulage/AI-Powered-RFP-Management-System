@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Mail, RefreshCw, BarChart2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, RefreshCw, BarChart2, CheckCircle } from 'lucide-react';
 import api from '../api/client';
 import clsx from 'clsx';
 
@@ -21,8 +21,8 @@ export const RFPDetail = () => {
 
     const fetchData = async () => {
         if (!id) return;
-        api.get(\`/rfps/\${id}\`).then(res => setRfp(res.data));
-        api.get(\`/proposals/\${id}\`).then(res => setProposals(res.data));
+        api.get(`/rfps/${id}`).then(res => setRfp(res.data));
+        api.get(`/proposals/${id}`).then(res => setProposals(res.data));
     };
 
     const fetchVendors = () => {
@@ -50,7 +50,7 @@ export const RFPDetail = () => {
         setActionStatus('Checking inbox for replies...');
         try {
             const res = await api.post('/emails/check');
-            setActionStatus(\`Processed \${res.data.processed.length} new emails.\`);
+            setActionStatus(`Processed ${res.data.processed.length} new emails.`);
             fetchData(); // Refresh proposals
         } catch (error) {
             console.error(error);
@@ -66,7 +66,7 @@ export const RFPDetail = () => {
         setLoading(true);
         setActionStatus('AI is comparing proposals...');
         try {
-            const res = await api.get(\`/proposals/\${id}/compare\`);
+            const res = await api.get(`/proposals/${id}/compare`);
             setComparison(res.data);
             setActionStatus('Comparison complete.');
         } catch (error) {
@@ -78,7 +78,7 @@ export const RFPDetail = () => {
     };
 
     const toggleVendor = (vId: string) => {
-        setSelectedVendors(prev => 
+        setSelectedVendors(prev =>
             prev.includes(vId) ? prev.filter(v => v !== vId) : [...prev, vId]
         );
     };
@@ -108,8 +108,8 @@ export const RFPDetail = () => {
                     <div className="space-y-2 max-h-40 overflow-y-auto mb-4 border p-2 rounded">
                         {vendors.map(v => (
                             <label key={v.id} className="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     checked={selectedVendors.includes(v.id)}
                                     onChange={() => toggleVendor(v.id)}
                                     className="rounded text-indigo-600 focus:ring-indigo-500"
@@ -118,7 +118,7 @@ export const RFPDetail = () => {
                             </label>
                         ))}
                     </div>
-                    <button 
+                    <button
                         onClick={handleSendEmails}
                         disabled={loading || selectedVendors.length === 0}
                         className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
@@ -128,23 +128,23 @@ export const RFPDetail = () => {
                 </div>
 
                 <div className="bg-white shadow sm:rounded-lg p-4 flex-1">
-                     <h3 className="text-lg font-medium text-gray-900 mb-4">2. Check & Compare</h3>
-                     <div className="space-y-4">
-                        <button 
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">2. Check & Compare</h3>
+                    <div className="space-y-4">
+                        <button
                             onClick={handleCheckInbox}
                             disabled={loading}
                             className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                         >
                             <RefreshCw className="w-4 h-4 mr-2" /> Check Inbox
                         </button>
-                         <button 
+                        <button
                             onClick={handleCompare}
                             disabled={loading || proposals.length === 0}
                             className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                         >
                             <BarChart2 className="w-4 h-4 mr-2" /> Compare Proposals
                         </button>
-                     </div>
+                    </div>
                 </div>
             </div>
 
@@ -169,7 +169,7 @@ export const RFPDetail = () => {
                         <p className="text-lg font-semibold text-indigo-800">Recommended Vendor: {comparison.recommendation}</p>
                         <p className="mt-2 text-indigo-700">{comparison.reasoning}</p>
                     </div>
-                    
+
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Comparison Table</h3>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
