@@ -34,7 +34,7 @@ export const sendRFPToVendors = async (rfpId: string, vendorIds: string[]) => {
             await transporter.sendMail(mailOptions);
             results.push({ vendor: vendor.email, status: 'sent' });
         } catch (error) {
-            console.error(\`Failed to send to \${vendor.email}\`, error);
+            console.error(`Failed to send to ${vendor.email}`, error);
             results.push({ vendor: vendor.email, status: 'failed', error });
         }
     }
@@ -69,7 +69,7 @@ export const checkEmailsForProposals = async () => {
         for (const item of messages) {
             const all = item.parts.find((part: any) => part.which === 'TEXT');
             const id = item.attributes.uid;
-            
+
             if (all && all.body) {
                 const parsed = await simpleParser(all.body);
                 const subject = parsed.subject || '';
@@ -79,32 +79,32 @@ export const checkEmailsForProposals = async () => {
                 // Check if subject contains RFP ID (simplistic matching)
                 const rfpIdMatch = subject.match(/RFP ID: ([a-zA-Z0-9-]+)/);
                 if (rfpIdMatch && fromEmail) {
-                     const rfpId = rfpIdMatch[1];
-                     
-                     // Find Vendor
-                     const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
-                     
-                     if (vendor && rfpId) {
-                         // Parse Proposal with AI
-                         const aiAnalysis = await parseVendorResponse(textContent);
-                         
-                         // Save Proposal
-                         await prisma.proposal.create({
-                             data: {
-                                 rfpId,
-                                 vendorId: vendor.id,
-                                 content: textContent,
-                                 structuredResponse: JSON.stringify(aiAnalysis),
-                                 score: 0, // Placeholder
-                                 summary: aiAnalysis.summary
-                             }
-                         });
-                         processed.push({ subject, from: fromEmail, status: 'processed' });
-                     }
+                    const rfpId = rfpIdMatch[1];
+
+                    // Find Vendor
+                    const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
+
+                    if (vendor && rfpId) {
+                        // Parse Proposal with AI
+                        const aiAnalysis = await parseVendorResponse(textContent);
+
+                        // Save Proposal
+                        await prisma.proposal.create({
+                            data: {
+                                rfpId,
+                                vendorId: vendor.id,
+                                content: textContent,
+                                structuredResponse: JSON.stringify(aiAnalysis),
+                                score: 0, // Placeholder
+                                summary: aiAnalysis.summary
+                            }
+                        });
+                        processed.push({ subject, from: fromEmail, status: 'processed' });
+                    }
                 }
             }
         }
-        
+
         connection.end();
         return processed;
     } catch (error) {
