@@ -1,9 +1,10 @@
 import prisma from '../lib/prisma';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const compareProposalsForRFP = async (rfpId: string) => {
     const proposals = await prisma.proposal.findMany({
@@ -30,20 +31,18 @@ export const compareProposalsForRFP = async (rfpId: string) => {
     Proposals:
     ${proposalsText}
 
-    Return ONLY valid JSON.
+    Return ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
     `;
 
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
-        });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        let text = response.text();
 
-        const choice = response.choices[0];
-        const content = choice?.message?.content;
-        if (!content) throw new Error("No content from AI");
-        return JSON.parse(content);
+        // Cleanup markdown code blocks if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(text);
     } catch (error) {
         console.error("Comparison Error:", error);
         throw new Error("Failed to compare proposals");

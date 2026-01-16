@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -19,7 +20,6 @@
     "imap-simple": "^5.1.0",
     "mailparser": "^3.9.1",
     "nodemailer": "^7.0.12",
-    "openai": "^6.16.0",
     "prisma": "5.22.0"
   },
   "devDependencies": {
