@@ -49,6 +49,7 @@ export const checkEmailsForProposals = async () => {
             host: 'imap.gmail.com', // Customize if needed
             port: 993,
             tls: true,
+            tlsOptions: { rejectUnauthorized: false },
             authTimeout: 3000
         }
     };

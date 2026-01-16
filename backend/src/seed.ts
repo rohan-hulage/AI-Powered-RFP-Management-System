@@ -4,8 +4,8 @@ async function main() {
     const vendors = [
         {
             name: 'TechSolutions Inc',
-            email: 'sales@techsolutions.com',
-            phone: '123-456-7890',
+            email: 'abhihulage14@gmail.com',
+            phone: '7558312273',
             address: '123 Tech Park, CA',
         },
         {
