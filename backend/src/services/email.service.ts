@@ -50,7 +50,7 @@ export const checkEmailsForProposals = async () => {
             port: 993,
             tls: true,
             tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 3000
+            authTimeout: 20000
         }
     };
 
