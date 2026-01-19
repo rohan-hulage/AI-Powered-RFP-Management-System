@@ -65,11 +65,6 @@ export const parseVendorResponse = async (emailContent: string) => {
         console.error("AI Parsing Error:", error);
         throw new Error("Failed to parse vendor response");
     }
-    return JSON.parse(text);
-} catch (error) {
-    console.error("AI Parsing Error:", error);
-    throw new Error("Failed to parse vendor response");
-}
 }
 
 export const compareProposals = async (oldContent: string, newContent: string, rfpContext: string): Promise<"KEEP_OLD" | "UPDATE_NEW"> => {
