@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
 import prisma from '../lib/prisma';
-import { parseVendorResponse } from './ai.service';
+import { parseVendorResponse, compareProposals } from './ai.service';
 
 const transporter = nodemailer.createTransport({
     service: 'gmail', // Or use host/port from env
@@ -114,25 +114,39 @@ export const checkEmailsForProposals = async () => {
                                     continue;
                                 }
 
-                                console.log(`Updating existing proposal for RFP ${rfpId} from ${vendor.name}`);
+                                console.log(`Found existing proposal for RFP ${rfpId} from ${vendor.name}. Analyzing which version is better...`);
 
                                 try {
-                                    // Parse Proposal with AI
-                                    const aiAnalysis = await parseVendorResponse(textContent);
+                                    // 1. Fetch RFP description for context if needed
+                                    const rfp = await prisma.rFP.findUnique({ where: { id: rfpId } });
+                                    const rfpContext = rfp?.description || "";
 
-                                    // Update Proposal
-                                    await prisma.proposal.update({
-                                        where: { id: existingProposal.id },
-                                        data: {
-                                            content: textContent,
-                                            structuredResponse: JSON.stringify(aiAnalysis),
-                                            summary: aiAnalysis.summary,
-                                            updatedAt: new Date() // Explicitly update timestamp
-                                        }
-                                    });
-                                    processed.push({ subject, from: fromEmail, status: 'updated' });
+                                    // 2. Compare Proposals
+                                    const decision = await compareProposals(existingProposal.content, textContent, rfpContext);
+
+                                    if (decision === "UPDATE_NEW") {
+                                        console.log(`Decision: UPDATE_NEW. Updating proposal...`);
+
+                                        // Parse Proposal with AI
+                                        const aiAnalysis = await parseVendorResponse(textContent);
+
+                                        // Update Proposal
+                                        await prisma.proposal.update({
+                                            where: { id: existingProposal.id },
+                                            data: {
+                                                content: textContent,
+                                                structuredResponse: JSON.stringify(aiAnalysis),
+                                                summary: aiAnalysis.summary,
+                                                updatedAt: new Date()
+                                            }
+                                        });
+                                        processed.push({ subject, from: fromEmail, status: 'updated_better_version' });
+                                    } else {
+                                        console.log(`Decision: KEEP_OLD. New proposal deemed inferior or duplicate. Skipping update.`);
+                                        processed.push({ subject, from: fromEmail, status: 'skipped_worse_version' });
+                                    }
                                 } catch (err) {
-                                    console.error(`Failed to update proposal for RFP ${rfpId} from ${vendor.name}:`, err);
+                                    console.error(`Failed to compare/update proposal for RFP ${rfpId} from ${vendor.name}:`, err);
                                 }
                             } else {
                                 console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
