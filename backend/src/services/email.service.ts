@@ -97,7 +97,7 @@ export const checkEmailsForProposals = async () => {
                         const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
 
                         if (vendor && rfpId) {
-                            // DUPLICATE CHECK: Skip if we already have a proposal for this RFP from this Vendor
+                            // Check for existing proposal
                             const existingProposal = await prisma.proposal.findFirst({
                                 where: {
                                     rfpId: rfpId,
@@ -106,27 +106,57 @@ export const checkEmailsForProposals = async () => {
                             });
 
                             if (existingProposal) {
-                                console.log(`Skipping duplicate proposal for RFP ${rfpId} from ${vendor.name}`);
-                                continue;
-                            }
-
-                            console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
-
-                            // Parse Proposal with AI
-                            const aiAnalysis = await parseVendorResponse(textContent);
-
-                            // Save Proposal
-                            await prisma.proposal.create({
-                                data: {
-                                    rfpId,
-                                    vendorId: vendor.id,
-                                    content: textContent,
-                                    structuredResponse: JSON.stringify(aiAnalysis),
-                                    score: 0, // Placeholder
-                                    summary: aiAnalysis.summary
+                                // If content is substantially the same, skip (optional optimization)
+                                // For now, we assume if we got a new email, it might be an update.
+                                // But to avoid processing the exact same email content repeatedly:
+                                if (existingProposal.content === textContent) {
+                                    console.log(`Skipping identical proposal content for RFP ${rfpId} from ${vendor.name}`);
+                                    continue;
                                 }
-                            });
-                            processed.push({ subject, from: fromEmail, status: 'processed' });
+
+                                console.log(`Updating existing proposal for RFP ${rfpId} from ${vendor.name}`);
+
+                                try {
+                                    // Parse Proposal with AI
+                                    const aiAnalysis = await parseVendorResponse(textContent);
+
+                                    // Update Proposal
+                                    await prisma.proposal.update({
+                                        where: { id: existingProposal.id },
+                                        data: {
+                                            content: textContent,
+                                            structuredResponse: JSON.stringify(aiAnalysis),
+                                            summary: aiAnalysis.summary,
+                                            updatedAt: new Date() // Explicitly update timestamp
+                                        }
+                                    });
+                                    processed.push({ subject, from: fromEmail, status: 'updated' });
+                                } catch (err) {
+                                    console.error(`Failed to update proposal for RFP ${rfpId} from ${vendor.name}:`, err);
+                                }
+                            } else {
+                                console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
+
+                                try {
+                                    // Parse Proposal with AI
+                                    const aiAnalysis = await parseVendorResponse(textContent);
+
+                                    // Save Proposal
+                                    await prisma.proposal.create({
+                                        data: {
+                                            rfpId,
+                                            vendorId: vendor.id,
+                                            content: textContent,
+                                            structuredResponse: JSON.stringify(aiAnalysis),
+                                            score: 0, // Placeholder
+                                            summary: aiAnalysis.summary
+                                        }
+                                    });
+                                    processed.push({ subject, from: fromEmail, status: 'created' });
+                                } catch (err) {
+                                    console.error(`Failed to create proposal for RFP ${rfpId} from ${vendor.name}:`, err);
+                                }
+                            }
                         }
                     }
                 }

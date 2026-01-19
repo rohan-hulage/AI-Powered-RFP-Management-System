@@ -1,4 +1,3 @@
-
 import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
 import dotenv from 'dotenv';
