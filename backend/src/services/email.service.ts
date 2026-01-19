@@ -66,7 +66,7 @@ export const checkEmailsForProposals = async () => {
         const searchCriteria = [['SINCE', twoDaysAgo]];
 
         const fetchOptions = {
-            bodies: ['HEADER', 'TEXT'],
+            bodies: [''],
             markSeen: true
         };
 
@@ -76,7 +76,7 @@ export const checkEmailsForProposals = async () => {
         console.log(`Found ${messages.length} messages since ${twoDaysAgo.toDateString()}`);
 
         for (const item of messages) {
-            const all = item.parts.find((part: any) => part.which === 'TEXT');
+            const all = item.parts.find((part: any) => part.which === '');
             const id = item.attributes.uid;
 
             if (all && all.body) {
@@ -85,45 +85,49 @@ export const checkEmailsForProposals = async () => {
                 const fromEmail = parsed.from?.value[0]?.address;
                 const textContent = parsed.text || '';
 
+                // console.log(`Debug: Checking email "${subject}" from ${fromEmail}`);
+
                 // Check if subject contains RFP ID (simplistic matching)
                 const rfpIdMatch = subject.match(/RFP ID: ([a-zA-Z0-9-]+)/);
-                if (rfpIdMatch && fromEmail) {
-                    const rfpId = rfpIdMatch[1];
 
-                    // Find Vendor
-                    const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
+                if (rfpIdMatch) {
+                    if (fromEmail) {
+                        const rfpId = rfpIdMatch[1];
+                        // Find Vendor
+                        const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
 
-                    if (vendor && rfpId) {
-                        // DUPLICATE CHECK: Skip if we already have a proposal for this RFP from this Vendor
-                        const existingProposal = await prisma.proposal.findFirst({
-                            where: {
-                                rfpId: rfpId,
-                                vendorId: vendor.id
+                        if (vendor && rfpId) {
+                            // DUPLICATE CHECK: Skip if we already have a proposal for this RFP from this Vendor
+                            const existingProposal = await prisma.proposal.findFirst({
+                                where: {
+                                    rfpId: rfpId,
+                                    vendorId: vendor.id
+                                }
+                            });
+
+                            if (existingProposal) {
+                                console.log(`Skipping duplicate proposal for RFP ${rfpId} from ${vendor.name}`);
+                                continue;
                             }
-                        });
 
-                        if (existingProposal) {
-                            console.log(`Skipping duplicate proposal for RFP ${rfpId} from ${vendor.name}`);
-                            continue;
+                            console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
+
+                            // Parse Proposal with AI
+                            const aiAnalysis = await parseVendorResponse(textContent);
+
+                            // Save Proposal
+                            await prisma.proposal.create({
+                                data: {
+                                    rfpId,
+                                    vendorId: vendor.id,
+                                    content: textContent,
+                                    structuredResponse: JSON.stringify(aiAnalysis),
+                                    score: 0, // Placeholder
+                                    summary: aiAnalysis.summary
+                                }
+                            });
+                            processed.push({ subject, from: fromEmail, status: 'processed' });
                         }
-
-                        console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
-
-                        // Parse Proposal with AI
-                        const aiAnalysis = await parseVendorResponse(textContent);
-
-                        // Save Proposal
-                        await prisma.proposal.create({
-                            data: {
-                                rfpId,
-                                vendorId: vendor.id,
-                                content: textContent,
-                                structuredResponse: JSON.stringify(aiAnalysis),
-                                score: 0, // Placeholder
-                                summary: aiAnalysis.summary
-                            }
-                        });
-                        processed.push({ subject, from: fromEmail, status: 'processed' });
                     }
                 }
             }
