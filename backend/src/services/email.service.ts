@@ -58,7 +58,13 @@ export const checkEmailsForProposals = async () => {
         const connection = await imaps.connect(config);
         await connection.openBox('INBOX');
 
-        const searchCriteria = ['UNSEEN'];
+        // Search options: Look for emails from the last 48 hours to ensure we don't miss anything
+        // but also don't overwhelm the connection by fetching thousands of emails.
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+        const searchCriteria = [['SINCE', twoDaysAgo]];
+
         const fetchOptions = {
             bodies: ['HEADER', 'TEXT'],
             markSeen: true
@@ -66,6 +72,8 @@ export const checkEmailsForProposals = async () => {
 
         const messages = await connection.search(searchCriteria, fetchOptions);
         const processed = [];
+
+        console.log(`Found ${messages.length} messages since ${twoDaysAgo.toDateString()}`);
 
         for (const item of messages) {
             const all = item.parts.find((part: any) => part.which === 'TEXT');
@@ -86,6 +94,21 @@ export const checkEmailsForProposals = async () => {
                     const vendor = await prisma.vendor.findUnique({ where: { email: fromEmail } });
 
                     if (vendor && rfpId) {
+                        // DUPLICATE CHECK: Skip if we already have a proposal for this RFP from this Vendor
+                        const existingProposal = await prisma.proposal.findFirst({
+                            where: {
+                                rfpId: rfpId,
+                                vendorId: vendor.id
+                            }
+                        });
+
+                        if (existingProposal) {
+                            console.log(`Skipping duplicate proposal for RFP ${rfpId} from ${vendor.name}`);
+                            continue;
+                        }
+
+                        console.log(`Processing new proposal for RFP ${rfpId} from ${vendor.name}`);
+
                         // Parse Proposal with AI
                         const aiAnalysis = await parseVendorResponse(textContent);
 
