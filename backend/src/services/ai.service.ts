@@ -35,10 +35,10 @@ export const parseRFPRequirements = async (userInput: string) => {
     }
 };
 
-export const parseVendorResponse = async (emailContent: string) => {
+export const parseVendorResponse = async (emailContent: string, attachments: { mimeType: string, data: string }[] = []) => {
     const prompt = `
     You are an AI procurement assistant.
-    Analyze the following email response from a vendor and extract structured data into a valid JSON object:
+    Analyze the following email response (and any attached documents) from a vendor and extract structured data into a valid JSON object:
     - vendor_name (if inferred)
     - price_quote (total amount or detailed breakdown)
     - delivery_timeline
@@ -48,12 +48,28 @@ export const parseVendorResponse = async (emailContent: string) => {
 
     Email Content:
     "${emailContent}"
+    
+    (Note: Attached documents may contain the actual quote details. Prioritize information from attachments if present.)
 
     Return ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
     `;
 
     try {
-        const result = await model.generateContent(prompt);
+        const inputParts: any[] = [prompt];
+
+        // Add attachments if any
+        if (attachments && attachments.length > 0) {
+            attachments.forEach(att => {
+                inputParts.push({
+                    inlineData: {
+                        data: att.data, // base64 string
+                        mimeType: att.mimeType
+                    }
+                });
+            });
+        }
+
+        const result = await model.generateContent(inputParts);
         const response = result.response;
         let text = response.text();
 
