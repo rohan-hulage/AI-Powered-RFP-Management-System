@@ -18,7 +18,7 @@ export const createRFP = async (req: Request, res: Response) => {
                 title: structuredData.title || 'Untitled RFP',
                 description: requirements,
                 budget: structuredData.budget?.toString(),
-                currency: 'USD', // Default
+                currency: 'USD',
                 timeline: structuredData.delivery_date,
                 structuredData: JSON.stringify(structuredData),
                 status: 'OPEN'
